@@ -1,0 +1,30 @@
+# Локальные настройки и секреты
+.env
+.env.*
+!.env.example
+
+# Резервные копии и локальные данные
+backups/
+*.dump
+*.sql
+planner-local*.json
+before-import*.json
+unsaved-recovery*.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+
+# JavaScript
+node_modules/
+dist/
+coverage/
+
+# Логи и системные файлы
+*.log
+.DS_Store
+Thumbs.db

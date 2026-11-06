@@ -1,0 +1,35 @@
+{
+    email {$ACME_EMAIL}
+    auto_https disable_redirects
+    servers {
+        protocols h1 h2
+    }
+}
+http://{$DOMAIN} {
+    redir {$PUBLIC_URL}{uri} 308
+}
+https://{$DOMAIN} {
+    tls {
+        issuer acme {
+            disable_tlsalpn_challenge
+        }
+    }
+    encode zstd gzip
+    request_body {
+        max_size 2MB
+    }
+    header {
+        X-Content-Type-Options nosniff
+        Referrer-Policy no-referrer
+        Cache-Control "no-store"
+        Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://telegram.org; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data: https:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self' https://web.telegram.org https://*.telegram.org"
+        -Server
+    }
+    handle /api/* {
+        reverse_proxy api:8000
+    }
+    handle {
+        root * /srv
+        file_server
+    }
+}
