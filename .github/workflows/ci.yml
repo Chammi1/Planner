@@ -65,7 +65,7 @@ jobs:
 
   docker-build:
     name: Build application image
-    needs: checks
+    needs: [checks, integration]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
 
@@ -77,3 +77,51 @@ jobs:
 
       - name: Build backend and bot image
         run: docker build --tag sotaplanner-api:ci ./backend
+
+  integration:
+    name: API and PostgreSQL integration tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: planner_test
+          POSTGRES_USER: planner
+          POSTGRES_PASSWORD: test-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U planner -d planner_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 20
+
+    env:
+      RUN_INTEGRATION: "1"
+      DATABASE_URL: postgresql://planner:test-password@127.0.0.1:5432/planner_test
+      BOT_TOKEN: "123456:ci-test-token-not-real"
+      OWNER_TELEGRAM_ID: "123456789"
+      APP_TIMEZONE: Asia/Yekaterinburg
+      PUBLIC_URL: https://example.com
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: python -m pip install -r backend/requirements.txt
+
+      - name: Run API integration tests
+        working-directory: backend
+        run: python -m unittest discover -s tests -p "test_api.py" -v
