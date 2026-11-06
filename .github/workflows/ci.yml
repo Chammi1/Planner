@@ -63,6 +63,22 @@ jobs:
           POSTGRES_PASSWORD: ci-test-password-not-real
         run: docker compose config --quiet
 
+      - name: Validate production Compose configuration
+        env:
+          DOMAIN: bot.sotaholder.ru
+          PUBLIC_URL: https://bot.sotaholder.ru:8443
+          ACME_EMAIL: ci@example.com
+          BOT_TOKEN: "123456:ci-test-token-not-real"
+          OWNER_TELEGRAM_ID: "123456789"
+          APP_TIMEZONE: Asia/Yekaterinburg
+          POSTGRES_PASSWORD: ci-test-password-not-real
+        run: |
+          docker compose \
+            --project-directory . \
+            --env-file deploy/release.env \
+            -f deploy/compose.production.yaml \
+            config --quiet
+
   docker-build:
     name: Build application image
     needs: [checks, integration]
