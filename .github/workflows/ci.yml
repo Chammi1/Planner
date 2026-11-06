@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Code checks and tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Check Python syntax
+        run: python -m compileall -q backend
+
+      - name: Run unit tests
+        working-directory: backend
+        run: python -m unittest discover -s tests -v
+
+      - name: Check frontend JavaScript
+        run: python scripts/check_frontend.py
+
+      - name: Check shell scripts
+        run: |
+          for file in scripts/*.sh; do
+            sh -n "$file"
+          done
+
+      - name: Validate Docker Compose configuration
+        env:
+          DOMAIN: bot.sotaholder.ru
+          PUBLIC_URL: https://bot.sotaholder.ru:8443
+          ACME_EMAIL: ci@example.com
+          BOT_TOKEN: "123456:ci-test-token-not-real"
+          OWNER_TELEGRAM_ID: "123456789"
+          APP_TIMEZONE: Asia/Yekaterinburg
+          POSTGRES_PASSWORD: ci-test-password-not-real
+        run: docker compose config --quiet
+
+  docker-build:
+    name: Build application image
+    needs: checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Build backend and bot image
+        run: docker build --tag sotaplanner-api:ci ./backend
